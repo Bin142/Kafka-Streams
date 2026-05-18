@@ -177,6 +177,89 @@ public class ConsumerGroupService {
         }
     }
 
+    /**
+     * Get consumer group offsets
+     */
+    public List<ConsumerGroupDetailDTO.OffsetDTO> getConsumerGroupOffsets(String clusterId, String groupId) {
+        permissionChecker.checkPermission(clusterId, Resource.CONSUMER_GROUP, Action.READ, groupId);
+        
+        try {
+            Map<TopicPartition, OffsetAndMetadata> offsets = 
+                    kafkaAdminWrapper.getConsumerGroupOffsets(clusterId, groupId);
+            
+            if (offsets.isEmpty()) {
+                return Collections.emptyList();
+            }
+            
+            List<TopicPartition> partitions = new ArrayList<>(offsets.keySet());
+            Map<TopicPartition, Long> endOffsets = kafkaAdminWrapper.getEndOffsets(clusterId, partitions);
+            
+            return offsets.entrySet().stream()
+                    .map(e -> {
+                        TopicPartition tp = e.getKey();
+                        OffsetAndMetadata om = e.getValue();
+                        long endOffset = endOffsets.getOrDefault(tp, 0L);
+                        long lag = Math.max(0, endOffset - om.offset());
+                        
+                        return ConsumerGroupDetailDTO.OffsetDTO.builder()
+                                .topic(tp.topic())
+                                .partition(tp.partition())
+                                .currentOffset(om.offset())
+                                .endOffset(endOffset)
+                                .lag(lag)
+                                .metadata(om.metadata())
+                                .build();
+                    })
+                    .sorted(Comparator.comparing(ConsumerGroupDetailDTO.OffsetDTO::getTopic)
+                            .thenComparingInt(ConsumerGroupDetailDTO.OffsetDTO::getPartition))
+                    .collect(Collectors.toList());
+            
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Failed to get offsets for consumer group {} in cluster {}", groupId, clusterId, e);
+            throw new BusinessException("Failed to get consumer group offsets: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete consumer group offsets for a specific topic
+     */
+    public void deleteOffsetsForTopic(String clusterId, String groupId, String topicName) {
+        permissionChecker.checkPermission(clusterId, Resource.CONSUMER_GROUP, Action.UPDATE, groupId);
+        
+        try {
+            // Check if group is empty
+            Map<String, ConsumerGroupDescription> descriptions = 
+                    kafkaAdminWrapper.describeConsumerGroups(clusterId, List.of(groupId));
+            ConsumerGroupDescription description = descriptions.get(groupId);
+            
+            if (description != null && description.state() != ConsumerGroupState.EMPTY) {
+                throw new BusinessException("Cannot delete offsets for consumer group with active members. " +
+                        "Please stop all consumers first. Current state: " + description.state());
+            }
+            
+            // Get current offsets and filter by topic
+            Map<TopicPartition, OffsetAndMetadata> offsets = 
+                    kafkaAdminWrapper.getConsumerGroupOffsets(clusterId, groupId);
+            
+            Set<TopicPartition> partitionsToDelete = offsets.keySet().stream()
+                    .filter(tp -> tp.topic().equals(topicName))
+                    .collect(Collectors.toSet());
+            
+            if (partitionsToDelete.isEmpty()) {
+                throw new BusinessException("Consumer group " + groupId + " has no offsets for topic " + topicName);
+            }
+            
+            kafkaAdminWrapper.deleteConsumerGroupOffsets(clusterId, groupId, partitionsToDelete);
+            
+            log.info("Deleted offsets for topic {} from consumer group {} in cluster {}", 
+                    topicName, groupId, clusterId);
+            
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Failed to delete offsets for consumer group {} in cluster {}", groupId, clusterId, e);
+            throw new BusinessException("Failed to delete consumer group offsets: " + e.getMessage());
+        }
+    }
+
     // ==================== Helper Methods ====================
 
     private ConsumerGroupDTO toConsumerGroupDTO(String clusterId, ConsumerGroupDescription description) {

@@ -12,6 +12,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/v1/clusters/{clusterId}/consumer-groups")
 @RequiredArgsConstructor
@@ -47,6 +49,14 @@ public class ConsumerGroupController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{groupId}/offsets")
+    @Operation(summary = "Get consumer group offsets")
+    public ResponseEntity<List<ConsumerGroupDetailDTO.OffsetDTO>> getConsumerGroupOffsets(
+            @PathVariable String clusterId,
+            @PathVariable String groupId) {
+        return ResponseEntity.ok(consumerGroupService.getConsumerGroupOffsets(clusterId, groupId));
+    }
+
     @PostMapping("/{groupId}/offsets/reset")
     @Operation(summary = "Reset consumer group offsets")
     public ResponseEntity<Void> resetOffsets(
@@ -55,5 +65,15 @@ public class ConsumerGroupController {
             @Valid @RequestBody OffsetResetRequest request) {
         consumerGroupService.resetOffsets(clusterId, groupId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{groupId}/offsets/{topicName}")
+    @Operation(summary = "Delete consumer group offsets for a specific topic")
+    public ResponseEntity<Void> deleteOffsetsForTopic(
+            @PathVariable String clusterId,
+            @PathVariable String groupId,
+            @PathVariable String topicName) {
+        consumerGroupService.deleteOffsetsForTopic(clusterId, groupId, topicName);
+        return ResponseEntity.noContent().build();
     }
 }

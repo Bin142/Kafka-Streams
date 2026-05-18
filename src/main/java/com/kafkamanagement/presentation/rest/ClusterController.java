@@ -36,4 +36,20 @@ public class ClusterController {
     public ResponseEntity<List<ClusterDetailDTO.NodeDTO>> getClusterNodes(@PathVariable String clusterId) {
         return ResponseEntity.ok(clusterService.getClusterNodes(clusterId));
     }
+
+    @GetMapping("/{clusterId}/nodes/{nodeId}")
+    @Operation(summary = "Get node details")
+    public ResponseEntity<ClusterDetailDTO.NodeDTO> getNodeDetail(
+            @PathVariable String clusterId,
+            @PathVariable int nodeId) {
+        return ResponseEntity.ok(clusterService.getNodeDetail(clusterId, nodeId));
+    }
+
+    @GetMapping("/{clusterId}/nodes/{nodeId}/configs")
+    @Operation(summary = "Get node (broker) configs")
+    public ResponseEntity<List<ClusterDetailDTO.ConfigEntryDTO>> getNodeConfigs(
+            @PathVariable String clusterId,
+            @PathVariable int nodeId) {
+        return ResponseEntity.ok(clusterService.getNodeConfigs(clusterId, nodeId));
+    }
 }

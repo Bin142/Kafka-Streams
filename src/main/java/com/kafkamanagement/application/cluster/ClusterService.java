@@ -82,6 +82,62 @@ public class ClusterService {
         }
     }
 
+    /**
+     * Get node details by node ID
+     */
+    public ClusterDetailDTO.NodeDTO getNodeDetail(String clusterId, int nodeId) {
+        permissionChecker.checkPermission(clusterId, Resource.CLUSTER, Action.READ);
+        
+        try {
+            Collection<Node> nodes = kafkaAdminWrapper.getNodes(clusterId);
+            Node controller = kafkaAdminWrapper.getController(clusterId);
+            
+            return nodes.stream()
+                    .filter(node -> node.id() == nodeId)
+                    .findFirst()
+                    .map(node -> ClusterDetailDTO.NodeDTO.builder()
+                            .id(node.id())
+                            .host(node.host())
+                            .port(node.port())
+                            .rack(node.rack())
+                            .isController(controller != null && node.id() == controller.id())
+                            .build())
+                    .orElseThrow(() -> new ResourceNotFoundException("Node", String.valueOf(nodeId)));
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to get node {} for cluster {}", nodeId, clusterId, e);
+            throw new RuntimeException("Failed to get node details: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get node (broker) configs
+     */
+    public List<ClusterDetailDTO.ConfigEntryDTO> getNodeConfigs(String clusterId, int nodeId) {
+        permissionChecker.checkPermission(clusterId, Resource.CLUSTER, Action.READ);
+        
+        try {
+            Collection<org.apache.kafka.clients.admin.ConfigEntry> configs = 
+                    kafkaAdminWrapper.getBrokerConfigs(clusterId, nodeId);
+            
+            return configs.stream()
+                    .map(entry -> ClusterDetailDTO.ConfigEntryDTO.builder()
+                            .name(entry.name())
+                            .value(entry.value())
+                            .source(entry.source().name())
+                            .isDefault(entry.isDefault())
+                            .isSensitive(entry.isSensitive())
+                            .isReadOnly(entry.isReadOnly())
+                            .build())
+                    .sorted((a, b) -> a.getName().compareToIgnoreCase(b.getName()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Failed to get configs for node {} in cluster {}", nodeId, clusterId, e);
+            throw new RuntimeException("Failed to get node configs: " + e.getMessage());
+        }
+    }
+
     private ClusterDTO toClusterDTO(ClusterConfig config) {
         String status = "UNKNOWN";
         int nodeCount = 0;

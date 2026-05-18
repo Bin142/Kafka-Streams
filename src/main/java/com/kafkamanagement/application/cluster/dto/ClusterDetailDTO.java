@@ -51,4 +51,17 @@ public class ClusterDetailDTO {
         private String url;
         private boolean connected;
     }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ConfigEntryDTO {
+        private String name;
+        private String value;
+        private String source;
+        private boolean isDefault;
+        private boolean isSensitive;
+        private boolean isReadOnly;
+    }
 }
