@@ -1,0 +1,144 @@
+spring:
+  application:
+    name: kafka-management
+
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/kafka_management
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Flyway Migration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Redis Cache
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  # Jackson
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLong12345}
+  access-token-expiration: 3600000  # 1 hour in milliseconds
+  refresh-token-expiration: 604800000  # 7 days in milliseconds
+
+# Kafka Management Configuration
+kafka-management:
+  # Cluster configurations loaded from separate file
+  clusters-config-file: classpath:kafka-clusters.yml
+  
+  # Default Kafka client properties
+  defaults:
+    admin:
+      request.timeout.ms: 30000
+      default.api.timeout.ms: 60000
+    consumer:
+      max.poll.records: 100
+      fetch.max.wait.ms: 500
+      auto.offset.reset: earliest
+      enable.auto.commit: false
+    producer:
+      acks: all
+      retries: 3
+      batch.size: 16384
+      linger.ms: 1
+
+  # Topic view filters
+  internal-topics-regex:
+    - "^_.*$"
+    - "^__.*$"
+    - "^.*_schemas$"
+    - "^.*-changelog$"
+    - "^.*connect-config$"
+    - "^.*connect-offsets$"
+    - "^.*connect-status$"
+  
+  stream-topics-regex:
+    - "^.*-changelog$"
+    - "^.*-repartition$"
+    - "^.*-subscription-registration-topic$"
+    - "^.*-subscription-response-topic$"
+
+  # Pagination defaults
+  pagination:
+    default-page-size: 25
+    max-page-size: 100
+
+  # Message browser defaults
+  message-browser:
+    default-size: 50
+    max-size: 500
+    poll-timeout-ms: 5000
+
+# Cache Configuration
+cache:
+  caffeine:
+    spec: maximumSize=1000,expireAfterWrite=30s
+  redis:
+    time-to-live: 60s
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.kafkamanagement: DEBUG
+    org.apache.kafka: WARN
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/kafka-management.log
+    max-size: 10MB
+    max-history: 30
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# OpenAPI Documentation
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha

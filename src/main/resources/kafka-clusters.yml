@@ -1,0 +1,42 @@
+# Kafka Clusters Configuration
+# This file contains connection details for Kafka clusters
+
+clusters:
+  # Development Cluster
+  - id: dev-cluster
+    name: Development Cluster
+    bootstrapServers: localhost:9092
+    properties:
+      # security.protocol: PLAINTEXT
+    schemaRegistry:
+      url: http://localhost:8081
+      # basicAuthUsername: 
+      # basicAuthPassword:
+    connect:
+      - name: connect-dev
+        url: http://localhost:8083
+        # basicAuthUsername:
+        # basicAuthPassword:
+
+  # Example: Production Cluster with SASL_SSL
+  # - id: prod-cluster
+  #   name: Production Cluster
+  #   bootstrapServers: kafka-prod-1:9093,kafka-prod-2:9093,kafka-prod-3:9093
+  #   properties:
+  #     security.protocol: SASL_SSL
+  #     sasl.mechanism: SCRAM-SHA-256
+  #     sasl.jaas.config: >
+  #       org.apache.kafka.common.security.scram.ScramLoginModule required
+  #       username="admin"
+  #       password="password";
+  #     ssl.truststore.location: /path/to/truststore.jks
+  #     ssl.truststore.password: truststorePassword
+  #   schemaRegistry:
+  #     url: https://schema-registry-prod:8085
+  #     basicAuthUsername: sr-user
+  #     basicAuthPassword: sr-password
+  #   connect:
+  #     - name: connect-prod
+  #       url: https://connect-prod:8083
+  #       basicAuthUsername: connect-user
+  #       basicAuthPassword: connect-password

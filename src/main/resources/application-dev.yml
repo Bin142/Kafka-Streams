@@ -1,0 +1,56 @@
+# Development profile - uses H2 in-memory database
+# Run with: ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+spring:
+  # H2 In-Memory Database
+  datasource:
+    url: jdbc:h2:mem:kafka_management;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+      data-locations: classpath:data-dev.sql
+
+  # Disable Flyway for dev profile (use JPA auto-create)
+  flyway:
+    enabled: false
+
+  # Disable Redis for dev profile
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+# Use simple cache instead of Redis
+spring.cache.type: simple
+
+# Disable authentication for development
+security:
+  auth:
+    disabled: true
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.kafkamanagement: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
